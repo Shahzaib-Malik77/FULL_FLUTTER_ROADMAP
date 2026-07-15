@@ -6,7 +6,7 @@ import '../models/roadmap_models.dart';
 import '../data/roadmap_data.dart';
 import '../data/database_helper.dart';
 import '../theme/app_colors.dart';
-
+import '../widgets/neo_brutalist_widgets.dart';
 
 class RoadmapScreen extends StatefulWidget {
   const RoadmapScreen({super.key});
@@ -65,15 +65,7 @@ class _RoadmapScreenState extends State<RoadmapScreen>
           .toList();
     }
     
-    if (normalizedQuery.isEmpty) {
-      // Collapse everything when search is empty
-      for (var s in sections) {
-        s.isExpanded = false;
-        for (var g in s.groups) {
-          g.isExpanded = false;
-        }
-      }
-    } else {
+    if (normalizedQuery.isNotEmpty) {
       final filtered = <RoadmapSection>[];
       for (var s in _cachedFilteredSections) {
         bool sectionMatches = s.title.toLowerCase().contains(normalizedQuery);
@@ -309,19 +301,10 @@ class _RoadmapScreenState extends State<RoadmapScreen>
                 elevation: 0,
                 toolbarHeight: 70,
                 titleSpacing: 16,
-                title: Container(
+                title: NeoContainer(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: AppColors.accentYellow,
-                    border: Border.all(color: AppColors.text, width: 2.2),
-                    borderRadius: BorderRadius.circular(10),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.5),
-                        offset: const Offset(3, 3),
-                      ),
-                    ],
-                  ),
+                  backgroundColor: AppColors.text,
+                  shadowOffset: 3.0,
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -330,7 +313,7 @@ class _RoadmapScreenState extends State<RoadmapScreen>
                       Text(
                         'FLUTTER ROADMAP',
                         style: TextStyle(
-                          fontFamily: 'Courier New',
+                          
                           fontSize: 15,
                           fontWeight: FontWeight.w900,
                           color: AppColors.text,
@@ -351,22 +334,10 @@ class _RoadmapScreenState extends State<RoadmapScreen>
                       children: [
                         Transform.rotate(
                           angle: -0.015,
-                          child: Container(
-                            clipBehavior: Clip.antiAlias,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(
-                                color: AppColors.text,
-                                width: 1.8,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.35),
-                                  offset: const Offset(2, 2),
-                                ),
-                              ],
-                            ),
+                          child: NeoContainer(
+                            backgroundColor: AppColors.bgSecondary,
+                            padding: const EdgeInsets.all(0),
+                            shadowOffset: 2.0,
                             child: Stack(
                               children: [
                                 // Removed missing section_banner.png asset
@@ -392,15 +363,15 @@ class _RoadmapScreenState extends State<RoadmapScreen>
                           'THE ULTIMATE FLUTTER\nDEVELOPER ROADMAP',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            fontFamily: 'Courier New',
+                            
                             fontSize: 26,
                             fontWeight: FontWeight.w900,
-                            color: AppColors.accentYellow,
+                            color: AppColors.text,
                             height: 1.2,
                             letterSpacing: 1.0,
                             shadows: [
                               Shadow(
-                                color: Colors.black.withValues(alpha: 0.8),
+                                color: AppColors.text,
                                 offset: const Offset(2, 3),
                               ),
                             ],
@@ -424,8 +395,8 @@ class _RoadmapScreenState extends State<RoadmapScreen>
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
                             _buildStatCard(totalTopics.toString(), 'Topics', AppColors.text, -0.02),
-                            _buildStatCard(completedTopics.toString(), 'Done', AppColors.accentYellow, 0.03),
-                            _buildStatCard((totalTopics - completedTopics).toString(), 'Left', AppColors.accentPink, -0.01),
+                            _buildStatCard(completedTopics.toString(), 'Done', AppColors.text, 0.03),
+                            _buildStatCard((totalTopics - completedTopics).toString(), 'Left', AppColors.text, -0.01),
                             _buildStatCard(notedTopics.toString(), 'Notes', AppColors.text, 0.02),
                           ],
                         ),
@@ -437,23 +408,10 @@ class _RoadmapScreenState extends State<RoadmapScreen>
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-                  child: Container(
-
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-
-
-
-
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppColors.text, width: 2.2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.4),
-                          offset: const Offset(4, 5),
-                        ),
-                      ],
-                    ),
+                  child: NeoContainer(
+                    backgroundColor: AppColors.bgSecondary,
+                    padding: const EdgeInsets.all(0),
+                    shadowOffset: 4.0,
                     child: Stack(
                       children: [
                         // Removed missing section_banner.png asset
@@ -482,18 +440,13 @@ class _RoadmapScreenState extends State<RoadmapScreen>
                                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                     decoration: BoxDecoration(
                                       color: const Color(0xFFF7F2E2),
-                                      border: Border.all(color: AppColors.text, width: 1.5),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withValues(alpha: 0.2),
-                                          offset: const Offset(1, 2),
-                                        ),
-                                      ],
+                                      border: Border.all(color: AppColors.text, width: 4.0),
+                                      boxShadow: const [],
                                     ),
                                     child: Text(
                                       '${(progressPercent * 100).toStringAsFixed(1)}%',
                                       style: const TextStyle(
-                                        fontFamily: 'Courier New',
+                                        
                                         fontWeight: FontWeight.bold,
                                         fontSize: 18,
                                         color: AppColors.text,
@@ -525,15 +478,15 @@ class _RoadmapScreenState extends State<RoadmapScreen>
                           height: 14,
                           decoration: BoxDecoration(
                             color: AppColors.bgPrimary,
-                            borderRadius: BorderRadius.circular(7),
-                            border: Border.all(color: AppColors.text, width: 1.8),
+                            borderRadius: BorderRadius.zero,
+                            border: Border.all(color: AppColors.text, width: 4.0),
                           ),
                           child: ClipRRect(
-                            borderRadius: BorderRadius.circular(5),
+                            borderRadius: BorderRadius.zero,
                             child: LinearProgressIndicator(
                               value: progressPercent,
                               backgroundColor: Colors.transparent,
-                              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.accentYellow),
+                              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.text),
                             ),
                           ),
                         ),
@@ -590,54 +543,6 @@ class _RoadmapScreenState extends State<RoadmapScreen>
                   ),
                 ),
               ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.text, width: 2.2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.4),
-                          offset: const Offset(3, 3),
-                        ),
-                      ],
-                    ),
-                    child: TextField(
-                      controller: _searchController,
-                      onChanged: _setSearchQuery,
-                      textInputAction: TextInputAction.search,
-                      style: const TextStyle(
-                        color: AppColors.text,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: 'Search topics, sections, or your notes...',
-                        hintStyle: TextStyle(color: AppColors.text.withValues(alpha: 0.5)),
-                        prefixIcon: const Icon(
-                          Icons.search,
-                          color: AppColors.text,
-                        ),
-                        suffixIcon: searchQuery.isEmpty
-                            ? null
-                            : IconButton(
-                                onPressed: () => _setSearchQuery(''),
-                                icon: const Icon(
-                                  Icons.close,
-                                  color: AppColors.text,
-                                ),
-                              ),
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        filled: false,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
               if (visibleSections.isEmpty)
                 SliverToBoxAdapter(
                   child: _buildEmptyState(),
@@ -655,33 +560,7 @@ class _RoadmapScreenState extends State<RoadmapScreen>
                     addSemanticIndexes: false,
                   ),
                 ),
-              SliverToBoxAdapter(
-                child: Container(
-                  padding: const EdgeInsets.all(30),
-                  child: Column(
-                    children: [
-                      const Text(
-                        'MADE WITH 💙 FOR FLUTTER DEVELOPERS',
-                        style: TextStyle(
-                          fontFamily: 'Courier New',
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.accentYellow,
-                          fontSize: 11,
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        'THE MOST DETAILED FLUTTER ROADMAP EVER 🚀',
-                        style: TextStyle(
-                          fontFamily: 'Courier New',
-                          color: AppColors.text.withValues(alpha: 0.6),
-                          fontSize: 10,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+
             ],
           ),
           if (_showBackToTop)
@@ -690,15 +569,9 @@ class _RoadmapScreenState extends State<RoadmapScreen>
               right: 20,
               child: Container(
                 decoration: BoxDecoration(
-                  color: AppColors.accentYellow,
-                  border: Border.all(color: AppColors.text, width: 2.0),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.4),
-                      offset: const Offset(2, 2),
-                    ),
-                  ],
+                  color: AppColors.text,
+                  border: Border.all(color: AppColors.text, width: 4.0),
+                  shape: BoxShape.rectangle,
                 ),
                 child: FloatingActionButton.small(
                   backgroundColor: Colors.transparent,
@@ -728,18 +601,10 @@ class _RoadmapScreenState extends State<RoadmapScreen>
   Widget _buildStatCard(String value, String label, Color color, double rotation) {
     return Transform.rotate(
       angle: rotation,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.text, width: 2.0),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.4),
-              offset: const Offset(3, 3),
-            ),
-          ],
-        ),
+      child: NeoContainer(
+        backgroundColor: AppColors.bgSecondary,
+        padding: const EdgeInsets.all(0),
+        shadowOffset: 3.0,
         child: Stack(
           children: [
             // Removed missing section_banner.png asset
@@ -754,7 +619,7 @@ class _RoadmapScreenState extends State<RoadmapScreen>
                     decoration: BoxDecoration(
                       color: AppColors.bgPrimary,
                       shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.text, width: 1.0),
+                      border: Border.all(color: AppColors.text, width: 4.0),
                     ),
                   ),
                   Text(
@@ -763,7 +628,7 @@ class _RoadmapScreenState extends State<RoadmapScreen>
                       fontSize: 20,
                       fontWeight: FontWeight.w900,
                       color: color == AppColors.text ? AppColors.text : color,
-                      fontFamily: 'Courier New',
+                      
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -788,19 +653,10 @@ class _RoadmapScreenState extends State<RoadmapScreen>
   Widget _buildEmptyState() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
-      child: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.text, width: 2.2),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.4),
-              offset: const Offset(3, 4),
-            ),
-          ],
-        ),
+      child: NeoContainer(
+        backgroundColor: AppColors.bgSecondary,
+        padding: const EdgeInsets.all(0),
+        shadowOffset: 4.0,
         child: Stack(
           children: [
             // Removed missing section_banner.png asset
@@ -811,7 +667,7 @@ class _RoadmapScreenState extends State<RoadmapScreen>
                   const Icon(
                     Icons.search_off_rounded,
                     size: 46,
-                    color: AppColors.accentPink,
+                    color: AppColors.text,
                   ),
                   const SizedBox(height: 12),
                   const Text(
@@ -830,25 +686,15 @@ class _RoadmapScreenState extends State<RoadmapScreen>
                     style: TextStyle(color: AppColors.text, height: 1.5, fontSize: 12),
                   ),
                   const SizedBox(height: 16),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.text,
-                      foregroundColor: AppColors.text,
-                      side: const BorderSide(color: AppColors.text, width: 1.5),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
+                  NeoButton(
+                    text: 'CLEAR SEARCH',
+                    icon: Icons.clear,
                     onPressed: () {
                       setState(() {
                         selectedFilter = 'all';
                       });
                       _setSearchQuery('');
                     },
-                    child: const Text(
-                      'CLEAR SEARCH',
-                      style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11),
-                    ),
                   ),
                 ],
               ),
@@ -872,25 +718,10 @@ class _RoadmapScreenState extends State<RoadmapScreen>
             _updateCache();
           });
         },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
+        child: NeoContainer(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            color: isSelected ? chipColor : chipColor.withValues(alpha: 0.35),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: isSelected ? AppColors.text : AppColors.text,
-              width: isSelected ? 2.2 : 1.5,
-            ),
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.4),
-                      offset: const Offset(2, 2),
-                    ),
-                  ]
-                : [],
-          ),
+          backgroundColor: isSelected ? chipColor : chipColor.withValues(alpha: 0.35),
+          shadowOffset: isSelected ? 4.0 : 0.0,
           child: Text(
             label.toUpperCase(),
             style: TextStyle(
@@ -908,6 +739,7 @@ class _RoadmapScreenState extends State<RoadmapScreen>
   Widget _buildSectionCard(RoadmapSection section, int index) {
     final stepColor = AppColors.getSectionColor(index);
     final levelColor = AppColors.getFilterColor(section.level);
+    final levelTextColor = AppColors.getFilterTextColor(section.level);
     final progress = section.totalTopics > 0
         ? section.completedTopics / section.totalTopics
         : 0.0;
@@ -915,29 +747,17 @@ class _RoadmapScreenState extends State<RoadmapScreen>
     return RepaintBoundary(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        child: Container(
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: AppColors.text,
-              width: 2.2,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.4),
-                offset: const Offset(3, 4),
-              ),
-            ],
-          ),
+        child: NeoContainer(
+          backgroundColor: AppColors.bgSecondary,
+          padding: const EdgeInsets.all(0),
+          shadowOffset: 4.0,
           child: Stack(
             children: [
               // Removed missing section_banner.png asset
               Column(
                 children: [
               InkWell(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.zero,
                 onTap: () => _toggleSectionExpansion(section),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -945,25 +765,18 @@ class _RoadmapScreenState extends State<RoadmapScreen>
                     children: [
                       Row(
                         children: [
-                          Container(
-                            width: 48,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              color: stepColor,
-                              border: Border.all(color: AppColors.text, width: 2.0),
-                              borderRadius: BorderRadius.circular(10),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.2),
-                                  offset: const Offset(2, 2),
-                                ),
-                              ],
-                            ),
-                            child: Center(
+                          NeoContainer(
+                            backgroundColor: stepColor,
+                            padding: const EdgeInsets.all(0),
+                            shadowOffset: 2.0,
+                            child: Container(
+                              width: 48,
+                              height: 48,
+                              alignment: Alignment.center,
                               child: Text(
                                 section.id.toString().padLeft(2, '0'),
                                 style: const TextStyle(
-                                  fontFamily: 'Courier New',
+                                  
                                   fontSize: 18,
                                   fontWeight: FontWeight.w900,
                                   color: AppColors.text,
@@ -1008,15 +821,15 @@ class _RoadmapScreenState extends State<RoadmapScreen>
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                 decoration: BoxDecoration(
                                   color: levelColor,
-                                  border: Border.all(color: AppColors.text, width: 1.5),
-                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(color: AppColors.text, width: 4.0),
+                                  borderRadius: BorderRadius.zero,
                                 ),
                                 child: Text(
                                   section.level.toUpperCase(),
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 8,
                                     fontWeight: FontWeight.w900,
-                                    color: AppColors.text,
+                                    color: levelTextColor,
                                   ),
                                 ),
                               ),
@@ -1024,7 +837,7 @@ class _RoadmapScreenState extends State<RoadmapScreen>
                               Text(
                                 '${section.completedTopics}/${section.totalTopics}',
                                 style: const TextStyle(
-                                  fontFamily: 'Courier New',
+                                  
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
                                   color: AppColors.text,
@@ -1049,11 +862,11 @@ class _RoadmapScreenState extends State<RoadmapScreen>
                         height: 6,
                         decoration: BoxDecoration(
                           color: AppColors.bgPrimary.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(3),
-                          border: Border.all(color: AppColors.text, width: 1.0),
+                          borderRadius: BorderRadius.zero,
+                          border: Border.all(color: AppColors.text, width: 4.0),
                         ),
                         child: ClipRRect(
-                          borderRadius: BorderRadius.circular(2),
+                          borderRadius: BorderRadius.zero,
                           child: LinearProgressIndicator(
                             value: progress,
                             backgroundColor: Colors.transparent,
@@ -1088,14 +901,10 @@ class _RoadmapScreenState extends State<RoadmapScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: double.infinity,
+          NeoContainer(
+            backgroundColor: AppColors.bgSecondary.withValues(alpha: 0.3),
             padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppColors.text, width: 1.5),
-            ),
+            shadowOffset: 2.0,
             child: Text(
               section.description,
               style: const TextStyle(
@@ -1122,20 +931,11 @@ class _RoadmapScreenState extends State<RoadmapScreen>
               group.isExpanded = !group.isExpanded;
             });
           },
-          child: Container(
+          child: NeoContainer(
+            backgroundColor: group.isExpanded ? AppColors.text : AppColors.bgSecondary,
             margin: const EdgeInsets.only(bottom: 8, top: 8),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: group.isExpanded ? AppColors.accentYellow : Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.text, width: 2),
-              boxShadow: const [
-                BoxShadow(
-                  color: AppColors.text,
-                  offset: Offset(2, 2),
-                ),
-              ],
-            ),
+            shadowOffset: 4.0,
             child: Row(
               children: [
                 Text(group.isExpanded ? '📂 ' : '📁 ', style: const TextStyle(fontSize: 16)),
@@ -1153,7 +953,7 @@ class _RoadmapScreenState extends State<RoadmapScreen>
                 Text(
                   '${group.completedCount}/${group.totalCount}',
                   style: const TextStyle(
-                    fontFamily: 'Courier New',
+                    
                     fontWeight: FontWeight.bold,
                     color: AppColors.text,
                     fontSize: 12,
@@ -1205,7 +1005,7 @@ class _RoadmapScreenState extends State<RoadmapScreen>
       spans.add(TextSpan(
         text: text.substring(index, index + query.length),
         style: style.copyWith(
-          backgroundColor: AppColors.accentYellow,
+          backgroundColor: AppColors.text,
           color: Colors.black, // Ensure contrast
         ),
       ));
@@ -1223,54 +1023,38 @@ class _RoadmapScreenState extends State<RoadmapScreen>
     TopicGroup group,
     TopicItem topic,
   ) {
-    final badgeColor = AppColors.accentYellow;
+    final badgeColor = AppColors.getFilterColor(topic.badge);
+    final badgeTextColor = AppColors.getFilterTextColor(topic.badge);
     final topicKey = _topicStorageKey(section, group, topic);
     final noteController = _controllerForTopic(topicKey, topic.notes);
     final notePreview = topic.notes.trim();
     final hasNote = notePreview.isNotEmpty;
     final isNoteOpen = _expandedNotes.contains(topicKey);
 
-    return Container(
+    return NeoContainer(
+      backgroundColor: topic.isChecked ? AppColors.badgeBeginner : AppColors.bgSecondary,
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      decoration: BoxDecoration(
-        color: topic.isChecked
-            ? const Color(0xFFDFD1B3)
-            : const Color(0xFFF5EFE1),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: AppColors.text,
-          width: 1.5,
-        ),
-      ),
+      shadowOffset: 4.0,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           InkWell(
             onTap: () => _toggleTopicChecked(topic),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.zero,
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 2),
               child: Row(
                 children: [
                   Container(
-                    width: 22,
-                    height: 22,
+                    width: 24,
+                    height: 24,
                     decoration: BoxDecoration(
-                      color: topic.isChecked ? AppColors.accentYellow : Colors.transparent,
-                      borderRadius: BorderRadius.circular(5),
+                      color: topic.isChecked ? AppColors.text : AppColors.bgSecondary,
                       border: Border.all(
                         color: AppColors.text,
-                        width: 2.0,
+                        width: 4.0,
                       ),
-                      boxShadow: topic.isChecked
-                          ? []
-                          : [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.12),
-                                offset: const Offset(1, 1),
-                              ),
-                            ],
                     ),
                     child: topic.isChecked
                         ? const Icon(Icons.check, size: 14, color: AppColors.text, weight: 3.0)
@@ -1289,21 +1073,10 @@ class _RoadmapScreenState extends State<RoadmapScreen>
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: badgeColor.withValues(alpha: 0.15),
-                      border: Border.all(color: AppColors.text.withValues(alpha: 0.5), width: 1.0),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      topic.badge.toUpperCase(),
-                      style: const TextStyle(
-                        fontSize: 8,
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.text,
-                      ),
-                    ),
+                  NeoBadge(
+                    text: topic.badge,
+                    backgroundColor: badgeColor,
+                    textColor: badgeTextColor,
                   ),
                 ],
               ),
@@ -1312,27 +1085,11 @@ class _RoadmapScreenState extends State<RoadmapScreen>
           const SizedBox(height: 10),
           Row(
             children: [
-              OutlinedButton.icon(
+              NeoButton(
+                text: hasNote ? 'EDIT' : 'NOTE',
+                icon: isNoteOpen ? Icons.notes_rounded : Icons.note_add_outlined,
+                backgroundColor: isNoteOpen ? AppColors.text : AppColors.bgSecondary,
                 onPressed: () => _toggleTopicNotes(topicKey),
-                icon: Icon(
-                  isNoteOpen ? Icons.notes_rounded : Icons.note_add_outlined,
-                  size: 14,
-                  color: AppColors.text,
-                ),
-                label: Text(
-                  (hasNote ? 'Edit note' : 'Add note').toUpperCase(),
-                  style: const TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0.5,
-                    color: AppColors.text,
-                  ),
-                ),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: AppColors.text, width: 1.5),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -1361,23 +1118,20 @@ class _RoadmapScreenState extends State<RoadmapScreen>
                     padding: const EdgeInsets.only(top: 12),
                     child: Column(
                       children: [
-                        Container(
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFAF6E9),
-                            border: Border.all(color: AppColors.text, width: 1.8),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
+                        NeoContainer(
+                          backgroundColor: AppColors.bgSecondary,
+                          padding: const EdgeInsets.all(0),
                           child: CustomPaint(
                             painter: NotebookLinesPainter(),
                             child: Padding(
                               padding: const EdgeInsets.only(left: 42, right: 12, top: 4, bottom: 4),
-                              child: TextField(
-                                controller: noteController,
-                                minLines: 3,
-                                maxLines: 5,
-                                style: const TextStyle(
-                                  fontFamily: 'Courier New',
+                                child: TextField(
+                                  controller: noteController,
+                                  keyboardType: TextInputType.multiline,
+                                  minLines: 3,
+                                  maxLines: null,
+                                  style: const TextStyle(
+                                  
                                   fontSize: 13,
                                   color: AppColors.text,
                                   height: 1.69,
@@ -1388,7 +1142,7 @@ class _RoadmapScreenState extends State<RoadmapScreen>
                                   hintText:
                                       'Write your notes, links, commands, or revision points here...',
                                   hintStyle: TextStyle(
-                                    fontFamily: 'Courier New',
+                                    
                                     fontSize: 13,
                                     color: Colors.black38,
                                   ),
@@ -1419,11 +1173,11 @@ class _RoadmapScreenState extends State<RoadmapScreen>
                                   noteController.clear();
                                   _updateTopicNote(section, group, topic, '');
                                 },
-                                icon: const Icon(Icons.delete_outline, size: 16, color: AppColors.accentPink),
+                                icon: const Icon(Icons.delete_outline, size: 16, color: AppColors.text),
                                 label: const Text(
                                   'CLEAR',
                                   style: TextStyle(
-                                    color: AppColors.accentPink,
+                                    color: AppColors.text,
                                     fontSize: 10,
                                     fontWeight: FontWeight.w900,
                                   ),

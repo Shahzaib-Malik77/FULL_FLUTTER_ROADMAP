@@ -75,17 +75,11 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
                         color: AppColors.accentYellow,
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.zero,
                         border: Border.all(
                           color: AppColors.text,
                           width: 4, 
                         ),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: AppColors.text,
-                            offset: Offset(8, 8),
-                          ),
-                        ],
                       ),
                       child: const Icon(
                         Icons.flutter_dash,
@@ -97,9 +91,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                       decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppColors.text, width: 3),
+                        color: AppColors.bgSecondary,
+                        borderRadius: BorderRadius.zero,
+                        border: Border.all(color: AppColors.text, width: 4.0),
                         boxShadow: const [
                           BoxShadow(
                             color: AppColors.text,

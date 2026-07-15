@@ -5,7 +5,7 @@ import '../data/database_helper.dart';
 import '../models/roadmap_models.dart';
 import '../data/roadmap_data.dart';
 import '../theme/app_colors.dart';
-
+import '../widgets/progress_panel.dart';
 
 class RoadmapHomePage extends StatefulWidget {
   const RoadmapHomePage({super.key});
@@ -30,31 +30,15 @@ class _RoadmapHomePageState extends State<RoadmapHomePage>
   final Set<String> _expandedNotes = <String>{};
   bool _showBackToTop = false;
 
-  int _cachedCompletedTopics = 0;
-  int _cachedNotedTopics = 0;
-  int _cachedTotalTopics = 0;
+  late final ValueNotifier<RoadmapProgressState> _progressNotifier;
   List<RoadmapSection> _cachedFilteredSections = [];
 
   void _updateCache() {
-    int total = 0;
-    int completed = 0;
-    int noted = 0;
-
-    for (final section in sections) {
-      total += section.totalTopics;
-      completed += section.completedTopics;
-      for (final group in section.groups) {
-        for (final topic in group.topics) {
-          if (topic.notes.trim().isNotEmpty) {
-            noted++;
-          }
-        }
-      }
-    }
-
-    _cachedTotalTopics = total;
-    _cachedCompletedTopics = completed;
-    _cachedNotedTopics = noted;
+    _progressNotifier.value = RoadmapProgressState(
+      totalTopics: sections.totalTopics,
+      completedTopics: sections.completedTopics,
+      notedTopics: sections.notedTopics,
+    );
 
     _cachedFilteredSections = sections;
     final normalizedQuery = searchQuery.trim().toLowerCase();
@@ -63,16 +47,8 @@ class _RoadmapHomePageState extends State<RoadmapHomePage>
           .where((s) => s.level == selectedFilter)
           .toList();
     }
-    
-    if (normalizedQuery.isEmpty) {
-      // Collapse everything when search is empty
-      for (var s in sections) {
-        s.isExpanded = false;
-        for (var g in s.groups) {
-          g.isExpanded = false;
-        }
-      }
-    } else {
+
+    if (normalizedQuery.isNotEmpty) {
       final filtered = <RoadmapSection>[];
       for (var s in _cachedFilteredSections) {
         bool sectionMatches = s.title.toLowerCase().contains(normalizedQuery);
@@ -83,33 +59,38 @@ class _RoadmapHomePageState extends State<RoadmapHomePage>
           final matchedTopics = <TopicItem>[];
 
           for (var t in g.topics) {
-            if (sectionMatches || groupMatches || t.name.toLowerCase().contains(normalizedQuery) || t.notes.toLowerCase().contains(normalizedQuery)) {
+            if (sectionMatches ||
+                groupMatches ||
+                t.name.toLowerCase().contains(normalizedQuery) ||
+                t.notes.toLowerCase().contains(normalizedQuery)) {
               matchedTopics.add(t);
             }
           }
 
           if (matchedTopics.isNotEmpty) {
             // Modify original group so it stays open when search is cleared
-            g.isExpanded = true; 
-            matchedGroups.add(TopicGroup(
-              name: g.name,
-              topics: matchedTopics,
-              isExpanded: true,
-            ));
+            g.isExpanded = true;
+            matchedGroups.add(
+              TopicGroup(name: g.name, topics: matchedTopics, isExpanded: true),
+            );
           }
         }
 
         if (matchedGroups.isNotEmpty || sectionMatches) {
           s.isExpanded = true;
-          filtered.add(RoadmapSection(
-            id: s.id,
-            title: s.title,
-            level: s.level,
-            icon: s.icon,
-            description: s.description,
-            groups: sectionMatches && matchedGroups.isEmpty ? s.groups : matchedGroups,
-            isExpanded: true,
-          ));
+          filtered.add(
+            RoadmapSection(
+              id: s.id,
+              title: s.title,
+              level: s.level,
+              icon: s.icon,
+              description: s.description,
+              groups: sectionMatches && matchedGroups.isEmpty
+                  ? s.groups
+                  : matchedGroups,
+              isExpanded: true,
+            ),
+          );
         }
       }
       _cachedFilteredSections = filtered;
@@ -120,6 +101,13 @@ class _RoadmapHomePageState extends State<RoadmapHomePage>
   void initState() {
     super.initState();
     sections = getRoadmapData();
+    _progressNotifier = ValueNotifier(
+      RoadmapProgressState(
+        totalTopics: sections.totalTopics,
+        completedTopics: sections.completedTopics,
+        notedTopics: sections.notedTopics,
+      ),
+    );
     _updateCache();
     _loadSavedProgress();
     _heroController = AnimationController(
@@ -141,7 +129,11 @@ class _RoadmapHomePageState extends State<RoadmapHomePage>
     });
   }
 
-  String _topicStorageKey(RoadmapSection section, TopicGroup group, TopicItem topic) {
+  String _topicStorageKey(
+    RoadmapSection section,
+    TopicGroup group,
+    TopicItem topic,
+  ) {
     return '${section.id}|${group.name}|${topic.name}';
   }
 
@@ -248,15 +240,13 @@ class _RoadmapHomePageState extends State<RoadmapHomePage>
       const Duration(milliseconds: 500),
       _saveProgress,
     );
-    
+
     if (wasEmpty != isNowEmpty && mounted) {
       setState(() {
         _updateCache();
       });
     }
   }
-
-
 
   @override
   void dispose() {
@@ -273,10 +263,6 @@ class _RoadmapHomePageState extends State<RoadmapHomePage>
     super.dispose();
   }
 
-  int get totalTopics => _cachedTotalTopics;
-  int get completedTopics => _cachedCompletedTopics;
-  double get progressPercent => _cachedTotalTopics == 0 ? 0 : _cachedCompletedTopics / _cachedTotalTopics;
-  int get notedTopics => _cachedNotedTopics;
   List<RoadmapSection> get filteredSections => _cachedFilteredSections;
 
   void _toggleSectionExpansion(RoadmapSection tappedSection) {
@@ -293,10 +279,15 @@ class _RoadmapHomePageState extends State<RoadmapHomePage>
     final visibleSections = filteredSections;
 
     return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
+      backgroundColor: Colors.transparent,
       body: Stack(
         children: [
-          // Removed missing dark_canvas.png asset
+          Positioned.fill(
+            child: Image.asset(
+              'assets/background_image.png',
+              fit: BoxFit.fill,
+            ),
+          ),
           CustomScrollView(
             controller: _scrollController,
             cacheExtent: _listCacheExtent,
@@ -306,276 +297,49 @@ class _RoadmapHomePageState extends State<RoadmapHomePage>
               SliverAppBar(
                 pinned: true,
                 backgroundColor: Colors.transparent,
+                surfaceTintColor: Colors.transparent,
+                scrolledUnderElevation: 0,
                 elevation: 0,
-                toolbarHeight: 70,
+                toolbarHeight: 90, // Increased height to accommodate larger banner
                 titleSpacing: 16,
-                title: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: AppColors.accentYellow,
-                    border: Border.all(color: AppColors.text, width: 2.2),
-                    borderRadius: BorderRadius.circular(10),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.5),
-                        offset: const Offset(3, 3),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text('🛠️', style: TextStyle(fontSize: 18)),
-                      const SizedBox(width: 8),
-                      Text(
-                        'FLUTTER ROADMAP',
-                        style: TextStyle(
-                          fontFamily: 'Courier New',
-                          fontSize: 15,
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.text,
-                          letterSpacing: 1.0,
-                        ),
-                      ),
-                    ],
+                title: Align(
+                  alignment: Alignment.centerLeft,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.asset(
+                      'assets/flutter_roadmap.png',
+                      height: 80, // Increased size for better visibility and quality
+                      fit: BoxFit.contain,
+                    ),
                   ),
                 ),
-
               ),
               SliverToBoxAdapter(
                 child: FadeTransition(
                   opacity: _heroAnimation,
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
-                    child: Column(
-                      children: [
-                        Transform.rotate(
-                          angle: -0.015,
-                          child: Container(
-                            clipBehavior: Clip.antiAlias,
-                            decoration: BoxDecoration(
-                              color: AppColors.bgSecondary,
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(
-                                color: AppColors.text,
-                                width: 1.8,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.35),
-                                  offset: const Offset(2, 2),
-                                ),
-                              ],
-                            ),
-                            child: Stack(
-                              children: [
-                                // Removed missing section_banner.png asset
-                                const Padding(
-                                  padding: EdgeInsets.symmetric(
-                                      horizontal: 16, vertical: 6),
-                                  child: Text(
-                                    '📖 COMPLETE FLUTTER GUIDE 2024',
-                                    style: TextStyle(
-                                      color: AppColors.text,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 22),
-                        Text(
-                          'THE ULTIMATE FLUTTER\nDEVELOPER ROADMAP',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontFamily: 'Courier New',
-                            fontSize: 26,
-                            fontWeight: FontWeight.w900,
-                            color: AppColors.accentYellow,
-                            height: 1.2,
-                            letterSpacing: 1.0,
-                            shadows: [
-                              Shadow(
-                                color: Colors.black.withValues(alpha: 0.8),
-                                offset: const Offset(2, 3),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                          child: Text(
-                            'Every concept, widget, package & technique to master Flutter — from beginner to expert.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: AppColors.textLight.withValues(alpha: 0.85),
-                              height: 1.5,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            _buildStatCard(totalTopics.toString(), 'Topics', AppColors.text, -0.02),
-                            _buildStatCard(completedTopics.toString(), 'Done', AppColors.accentYellow, 0.03),
-                            _buildStatCard((totalTopics - completedTopics).toString(), 'Left', AppColors.accentPink, -0.01),
-                            _buildStatCard(notedTopics.toString(), 'Notes', AppColors.accentCopper, 0.02),
-                          ],
-                        ),
-                      ],
+                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 10), // Minimal padding so everything is close
+                    child: Center(
+                      child: Image.asset(
+                        'assets/guide_badge.png',
+                        fit: BoxFit.contain,
+                        height: 85,
+                      ),
                     ),
                   ),
                 ),
               ),
               SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-                  child: Container(
-
-                    decoration: BoxDecoration(
-                      color: AppColors.bgSecondary,
-
-
-
-
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppColors.text, width: 2.2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.4),
-                          offset: const Offset(4, 5),
-                        ),
-                      ],
-                    ),
-                    child: Stack(
-                      children: [
-                        // Removed missing section_banner.png asset
-                        Padding(
-                          padding: const EdgeInsets.all(20),
-                          child: Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              '📊 OVERALL PROGRESS',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w900,
-                                color: AppColors.text,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                            Stack(
-                              clipBehavior: Clip.none,
-                              children: [
-                                Transform.rotate(
-                                  angle: -0.06,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFF7F2E2),
-                                      border: Border.all(color: AppColors.text, width: 1.5),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withValues(alpha: 0.2),
-                                          offset: const Offset(1, 2),
-                                        ),
-                                      ],
-                                    ),
-                                    child: Text(
-                                      '${(progressPercent * 100).toStringAsFixed(1)}%',
-                                      style: const TextStyle(
-                                        fontFamily: 'Courier New',
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 18,
-                                        color: AppColors.text,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                Positioned(
-                                  top: -6,
-                                  left: -8,
-                                  child: Transform.rotate(
-                                    angle: -0.4,
-                                    child: Container(
-                                      width: 22,
-                                      height: 10,
-                                      decoration: BoxDecoration(
-                                        color: const Color(0x7FD6C8AF),
-                                        border: Border.all(color: Colors.black12, width: 0.5),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Container(
-                          height: 14,
-                          decoration: BoxDecoration(
-                            color: AppColors.bgPrimary,
-                            borderRadius: BorderRadius.circular(7),
-                            border: Border.all(color: AppColors.text, width: 1.8),
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(5),
-                            child: LinearProgressIndicator(
-                              value: progressPercent,
-                              backgroundColor: Colors.transparent,
-                              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.accentYellow),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        Row(
-                          children: [
-                            Text(
-                              '✅ $completedTopics DONE',
-                              style: const TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w900,
-                                  color: AppColors.text),
-                            ),
-                            const SizedBox(width: 16),
-                            Text(
-                              '📋 ${totalTopics - completedTopics} LEFT',
-                              style: const TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w900,
-                                  color: AppColors.text),
-                            ),
-                            const Spacer(),
-                            Text(
-                              '📝 $notedTopics NOTES',
-                              style: const TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w900,
-                                  color: AppColors.text),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                child: RoadmapProgressPanel(
+                  progressNotifier: _progressNotifier,
+                ),
               ),
-            ),
-          ),
-        ),
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 10,
+                  ),
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
@@ -592,18 +356,15 @@ class _RoadmapHomePageState extends State<RoadmapHomePage>
               ),
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 10,
+                  ),
                   child: Container(
                     decoration: BoxDecoration(
                       color: AppColors.bgSecondary,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.text, width: 2.2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.4),
-                          offset: const Offset(3, 3),
-                        ),
-                      ],
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: AppColors.border, width: 1.0),
                     ),
                     child: TextField(
                       controller: _searchController,
@@ -615,7 +376,9 @@ class _RoadmapHomePageState extends State<RoadmapHomePage>
                       ),
                       decoration: InputDecoration(
                         hintText: 'Search topics, sections, or your notes...',
-                        hintStyle: TextStyle(color: AppColors.text.withValues(alpha: 0.5)),
+                        hintStyle: TextStyle(
+                          color: AppColors.text.withValues(alpha: 0.5),
+                        ),
                         prefixIcon: const Icon(
                           Icons.search,
                           color: AppColors.text,
@@ -639,13 +402,11 @@ class _RoadmapHomePageState extends State<RoadmapHomePage>
                 ),
               ),
               if (visibleSections.isEmpty)
-                SliverToBoxAdapter(
-                  child: _buildEmptyState(),
-                )
+                SliverToBoxAdapter(child: _buildEmptyState())
               else
                 SliverList(
                   delegate: SliverChildBuilderDelegate(
-                        (context, index) {
+                    (context, index) {
                       final section = visibleSections[index];
                       return _buildSectionCard(section, index);
                     },
@@ -655,33 +416,7 @@ class _RoadmapHomePageState extends State<RoadmapHomePage>
                     addSemanticIndexes: false,
                   ),
                 ),
-              SliverToBoxAdapter(
-                child: Container(
-                  padding: const EdgeInsets.all(30),
-                  child: Column(
-                    children: [
-                      const Text(
-                        'MADE WITH 💙 FOR FLUTTER DEVELOPERS',
-                        style: TextStyle(
-                          fontFamily: 'Courier New',
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.accentYellow,
-                          fontSize: 11,
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        'THE MOST DETAILED FLUTTER ROADMAP EVER 🚀',
-                        style: TextStyle(
-                          fontFamily: 'Courier New',
-                          color: AppColors.textLight.withValues(alpha: 0.6),
-                          fontSize: 10,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+
             ],
           ),
           if (_showBackToTop)
@@ -690,13 +425,14 @@ class _RoadmapHomePageState extends State<RoadmapHomePage>
               right: 20,
               child: Container(
                 decoration: BoxDecoration(
-                  color: AppColors.accentYellow,
-                  border: Border.all(color: AppColors.text, width: 2.0),
+                  color: AppColors.bgSecondary,
+                  border: Border.all(color: AppColors.border, width: 1.0),
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.4),
-                      offset: const Offset(2, 2),
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
                     ),
                   ],
                 ),
@@ -724,67 +460,6 @@ class _RoadmapHomePageState extends State<RoadmapHomePage>
     );
   }
 
-
-  Widget _buildStatCard(String value, String label, Color color, double rotation) {
-    return Transform.rotate(
-      angle: rotation,
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.bgSecondary,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.text, width: 2.0),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.4),
-              offset: const Offset(3, 3),
-            ),
-          ],
-        ),
-        child: Stack(
-          children: [
-            // Removed missing section_banner.png asset
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              child: Column(
-                children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    margin: const EdgeInsets.only(bottom: 6),
-                    decoration: BoxDecoration(
-                      color: AppColors.bgPrimary,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.text, width: 1.0),
-                    ),
-                  ),
-                  Text(
-                    value,
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                      color: color == AppColors.text ? AppColors.text : color,
-                      fontFamily: 'Courier New',
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    label.toUpperCase(),
-                    style: const TextStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.text,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildEmptyState() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
@@ -792,12 +467,13 @@ class _RoadmapHomePageState extends State<RoadmapHomePage>
         width: double.infinity,
         decoration: BoxDecoration(
           color: AppColors.bgSecondary,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.text, width: 2.2),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.border, width: 1.0),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.4),
-              offset: const Offset(3, 4),
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -811,14 +487,14 @@ class _RoadmapHomePageState extends State<RoadmapHomePage>
                   const Icon(
                     Icons.search_off_rounded,
                     size: 46,
-                    color: AppColors.accentPink,
+                    color: AppColors.text,
                   ),
                   const SizedBox(height: 12),
                   const Text(
                     'NO MATCHING ROADMAP SECTIONS',
                     style: TextStyle(
                       color: AppColors.text,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
                       fontSize: 14,
                       letterSpacing: 0.5,
                     ),
@@ -827,16 +503,24 @@ class _RoadmapHomePageState extends State<RoadmapHomePage>
                   const Text(
                     'Try another keyword or clear the level filter to see more topics.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: AppColors.text, height: 1.5, fontSize: 12),
+                    style: TextStyle(
+                      color: AppColors.text,
+                      height: 1.5,
+                      fontSize: 12,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.text,
-                      foregroundColor: AppColors.textLight,
-                      side: const BorderSide(color: AppColors.text, width: 1.5),
+                      backgroundColor: AppColors.accent,
+                      foregroundColor: AppColors.bgPrimary,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                     onPressed: () {
@@ -847,7 +531,10 @@ class _RoadmapHomePageState extends State<RoadmapHomePage>
                     },
                     child: const Text(
                       'CLEAR SEARCH',
-                      style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11,
+                      ),
                     ),
                   ),
                 ],
@@ -876,27 +563,23 @@ class _RoadmapHomePageState extends State<RoadmapHomePage>
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
-            color: isSelected ? chipColor : chipColor.withValues(alpha: 0.35),
-            borderRadius: BorderRadius.circular(8),
+            color: isSelected
+                ? chipColor.withOpacity(0.15)
+                : AppColors.bgTertiary,
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isSelected ? AppColors.textLight : AppColors.text,
-              width: isSelected ? 2.2 : 1.5,
+              color: isSelected ? chipColor.withOpacity(0.5) : AppColors.border,
+              width: 1.0,
             ),
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.4),
-                      offset: const Offset(2, 2),
-                    ),
-                  ]
-                : [],
           ),
           child: Text(
             label.toUpperCase(),
             style: TextStyle(
               fontSize: 10,
-              fontWeight: FontWeight.w900,
-              color: isSelected ? AppColors.textLight : AppColors.textLight.withValues(alpha: 0.7),
+              fontWeight: FontWeight.w700,
+              color: isSelected
+                  ? AppColors.textLight
+                  : AppColors.textLight.withValues(alpha: 0.7),
               letterSpacing: 0.5,
             ),
           ),
@@ -908,6 +591,7 @@ class _RoadmapHomePageState extends State<RoadmapHomePage>
   Widget _buildSectionCard(RoadmapSection section, int index) {
     final stepColor = AppColors.getSectionColor(index);
     final levelColor = AppColors.getFilterColor(section.level);
+    final levelTextColor = AppColors.getFilterTextColor(section.level);
     final progress = section.totalTopics > 0
         ? section.completedTopics / section.totalTopics
         : 0.0;
@@ -919,15 +603,13 @@ class _RoadmapHomePageState extends State<RoadmapHomePage>
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: AppColors.bgSecondary,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: AppColors.text,
-              width: 2.2,
-            ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.border, width: 1.0),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.4),
-                offset: const Offset(3, 4),
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
@@ -936,148 +618,158 @@ class _RoadmapHomePageState extends State<RoadmapHomePage>
               // Removed missing section_banner.png asset
               Column(
                 children: [
-              InkWell(
-                borderRadius: BorderRadius.circular(16),
-                onTap: () => _toggleSectionExpansion(section),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      Row(
+                  InkWell(
+                    borderRadius: BorderRadius.zero,
+                    onTap: () => _toggleSectionExpansion(section),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
                         children: [
-                          Container(
-                            width: 48,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              color: stepColor,
-                              border: Border.all(color: AppColors.text, width: 2.0),
-                              borderRadius: BorderRadius.circular(10),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.2),
-                                  offset: const Offset(2, 2),
+                          Row(
+                            children: [
+                              Container(
+                                width: 48,
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  color: stepColor.withOpacity(0.1),
+                                  border: Border.all(
+                                    color: stepColor.withOpacity(0.3),
+                                    width: 1.0,
+                                  ),
+                                  borderRadius: BorderRadius.circular(14),
                                 ),
-                              ],
-                            ),
-                            child: Center(
-                              child: Text(
-                                section.id.toString().padLeft(2, '0'),
-                                style: const TextStyle(
-                                  fontFamily: 'Courier New',
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w900,
-                                  color: AppColors.text,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildHighlightedText(
-                                  section.title.toUpperCase(),
-                                  const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w900,
-                                    color: AppColors.text,
-                                    letterSpacing: 0.5,
+                                child: Center(
+                                  child: Text(
+                                    section.id.toString().padLeft(2, '0'),
+                                    style: TextStyle(
+                                      fontFamily: 'Courier New',
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700,
+                                      color: stepColor,
+                                    ),
                                   ),
                                 ),
-                                const SizedBox(height: 4),
-                                Row(
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      '${section.totalTopics} TOPICS  •  ${section.groups.length} GROUPS',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.text.withValues(alpha: 0.6),
+                                    _buildHighlightedText(
+                                      section.title.toUpperCase(),
+                                      const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.text,
+                                        letterSpacing: 0.5,
                                       ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        Text(
+                                          '${section.totalTopics} TOPICS  •  ${section.groups.length} GROUPS',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.text.withValues(
+                                              alpha: 0.6,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
-                              ],
-                            ),
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: levelColor,
-                                  border: Border.all(color: AppColors.text, width: 1.5),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  section.level.toUpperCase(),
-                                  style: const TextStyle(
-                                    fontSize: 8,
-                                    fontWeight: FontWeight.w900,
-                                    color: AppColors.textLight,
-                                  ),
-                                ),
                               ),
-                              const SizedBox(height: 6),
-                              Text(
-                                '${section.completedTopics}/${section.totalTopics}',
-                                style: const TextStyle(
-                                  fontFamily: 'Courier New',
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 3,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: levelColor.withOpacity(0.15),
+                                      border: Border.all(
+                                        color: levelColor.withOpacity(0.5),
+                                        width: 1.0,
+                                      ),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      section.level.toUpperCase(),
+                                      style: TextStyle(
+                                        fontSize: 8,
+                                        fontWeight: FontWeight.w900,
+                                        color: levelTextColor,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    '${section.completedTopics}/${section.totalTopics}',
+                                    style: const TextStyle(
+                                      fontFamily: 'Courier New',
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.text,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(width: 8),
+                              AnimatedRotation(
+                                turns: section.isExpanded ? 0.5 : 0,
+                                duration: const Duration(milliseconds: 300),
+                                child: const Icon(
+                                  Icons.keyboard_arrow_down,
                                   color: AppColors.text,
+                                  size: 22,
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(width: 8),
-                          AnimatedRotation(
-                            turns: section.isExpanded ? 0.5 : 0,
-                            duration: const Duration(milliseconds: 300),
-                            child: const Icon(
-                              Icons.keyboard_arrow_down,
-                              color: AppColors.text,
-                              size: 22,
+                          const SizedBox(height: 12),
+                          Container(
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: AppColors.bgPrimary,
+                              borderRadius: BorderRadius.circular(2),
+                              border: Border.all(
+                                color: AppColors.border,
+                                width: 0.5,
+                              ),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(2),
+                              child: LinearProgressIndicator(
+                                value: progress,
+                                backgroundColor: Colors.transparent,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  stepColor,
+                                ),
+                              ),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 12),
-                      Container(
-                        height: 6,
-                        decoration: BoxDecoration(
-                          color: AppColors.bgPrimary.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(3),
-                          border: Border.all(color: AppColors.text, width: 1.0),
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(2),
-                          child: LinearProgressIndicator(
-                            value: progress,
-                            backgroundColor: Colors.transparent,
-                            valueColor: AlwaysStoppedAnimation<Color>(stepColor),
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-              AnimatedSize(
-                duration: const Duration(milliseconds: 220),
-                curve: Curves.easeOut,
-                alignment: Alignment.topCenter,
-                child: section.isExpanded
-                    ? _buildExpandedContent(section)
-                    : const SizedBox.shrink(),
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOut,
+                    alignment: Alignment.topCenter,
+                    child: section.isExpanded
+                        ? _buildExpandedContent(section)
+                        : const SizedBox.shrink(),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
-      ),
-    ),
+        ),
       ),
     );
   }
@@ -1092,9 +784,9 @@ class _RoadmapHomePageState extends State<RoadmapHomePage>
             width: double.infinity,
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppColors.text, width: 1.5),
+              color: AppColors.bgPrimary,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border, width: 1.0),
             ),
             child: Text(
               section.description,
@@ -1126,43 +818,49 @@ class _RoadmapHomePageState extends State<RoadmapHomePage>
             margin: const EdgeInsets.only(bottom: 8, top: 8),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: group.isExpanded ? AppColors.accentYellow : Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.text, width: 2),
-              boxShadow: const [
-                BoxShadow(
-                  color: AppColors.text,
-                  offset: Offset(2, 2),
-                ),
-              ],
+              color: group.isExpanded
+                  ? AppColors.bgTertiary
+                  : AppColors.bgPrimary,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: group.isExpanded
+                    ? AppColors.borderStrong
+                    : AppColors.border,
+                width: 1.0,
+              ),
             ),
             child: Row(
               children: [
-                Text(group.isExpanded ? '📂 ' : '📁 ', style: const TextStyle(fontSize: 16)),
+                Text(
+                  group.isExpanded ? '📂 ' : '📁 ',
+                  style: const TextStyle(fontSize: 16),
+                ),
                 Expanded(
                   child: _buildHighlightedText(
                     group.name.toUpperCase(),
                     const TextStyle(
                       fontSize: 13,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.text,
-                      letterSpacing: 0.8,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textLight,
+                      letterSpacing: 0.5,
                     ),
                   ),
                 ),
                 Text(
                   '${group.completedCount}/${group.totalCount}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Courier New',
                     fontWeight: FontWeight.bold,
-                    color: AppColors.text,
+                    color: AppColors.text.withOpacity(0.6),
                     fontSize: 12,
                   ),
                 ),
                 const SizedBox(width: 8),
                 Icon(
-                  group.isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                  color: AppColors.text,
+                  group.isExpanded
+                      ? Icons.keyboard_arrow_up
+                      : Icons.keyboard_arrow_down,
+                  color: AppColors.textMuted,
                   size: 20,
                 ),
               ],
@@ -1171,7 +869,9 @@ class _RoadmapHomePageState extends State<RoadmapHomePage>
         ),
         if (group.isExpanded) ...[
           const SizedBox(height: 8),
-          ...group.topics.map((topic) => _buildTopicItem(section, group, topic)),
+          ...group.topics.map(
+            (topic) => _buildTopicItem(section, group, topic),
+          ),
           const SizedBox(height: 8),
         ],
       ],
@@ -1180,15 +880,15 @@ class _RoadmapHomePageState extends State<RoadmapHomePage>
 
   Widget _buildHighlightedText(String text, TextStyle style) {
     if (searchQuery.isEmpty) return Text(text, style: style);
-    
+
     final query = searchQuery.toLowerCase();
     final lowerText = text.toLowerCase();
-    
+
     if (!lowerText.contains(query)) return Text(text, style: style);
-    
+
     List<TextSpan> spans = [];
     int start = 0;
-    
+
     while (true) {
       final index = lowerText.indexOf(query, start);
       if (index < 0) {
@@ -1197,25 +897,25 @@ class _RoadmapHomePageState extends State<RoadmapHomePage>
         }
         break;
       }
-      
+
       if (index > start) {
         spans.add(TextSpan(text: text.substring(start, index), style: style));
       }
-      
-      spans.add(TextSpan(
-        text: text.substring(index, index + query.length),
-        style: style.copyWith(
-          backgroundColor: AppColors.accentYellow,
-          color: Colors.black, // Ensure contrast
+
+      spans.add(
+        TextSpan(
+          text: text.substring(index, index + query.length),
+          style: style.copyWith(
+            backgroundColor: AppColors.text,
+            color: Colors.black, // Ensure contrast
+          ),
         ),
-      ));
-      
+      );
+
       start = index + query.length;
     }
-    
-    return RichText(
-      text: TextSpan(children: spans),
-    );
+
+    return RichText(text: TextSpan(children: spans));
   }
 
   Widget _buildTopicItem(
@@ -1223,7 +923,8 @@ class _RoadmapHomePageState extends State<RoadmapHomePage>
     TopicGroup group,
     TopicItem topic,
   ) {
-    final badgeColor = AppColors.accentYellow;
+    final badgeColor = AppColors.getFilterColor(topic.badge);
+    final badgeTextColor = AppColors.getFilterTextColor(topic.badge);
     final topicKey = _topicStorageKey(section, group, topic);
     final noteController = _controllerForTopic(topicKey, topic.notes);
     final notePreview = topic.notes.trim();
@@ -1235,12 +936,14 @@ class _RoadmapHomePageState extends State<RoadmapHomePage>
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
         color: topic.isChecked
-            ? const Color(0xFFDFD1B3)
-            : const Color(0xFFF5EFE1),
-        borderRadius: BorderRadius.circular(10),
+            ? AppColors.accent.withOpacity(0.1)
+            : AppColors.bgTertiary,
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: AppColors.text,
-          width: 1.5,
+          color: topic.isChecked
+              ? AppColors.accent.withOpacity(0.3)
+              : AppColors.border,
+          width: 1.0,
         ),
       ),
       child: Column(
@@ -1248,7 +951,7 @@ class _RoadmapHomePageState extends State<RoadmapHomePage>
         children: [
           InkWell(
             onTap: () => _toggleTopicChecked(topic),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.zero,
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 2),
               child: Row(
@@ -1257,23 +960,24 @@ class _RoadmapHomePageState extends State<RoadmapHomePage>
                     width: 22,
                     height: 22,
                     decoration: BoxDecoration(
-                      color: topic.isChecked ? AppColors.accentYellow : Colors.transparent,
-                      borderRadius: BorderRadius.circular(5),
+                      color: topic.isChecked
+                          ? AppColors.accent
+                          : AppColors.bgPrimary,
+                      borderRadius: BorderRadius.circular(6),
                       border: Border.all(
-                        color: AppColors.text,
-                        width: 2.0,
+                        color: topic.isChecked
+                            ? AppColors.accent
+                            : AppColors.borderStrong,
+                        width: 1.5,
                       ),
-                      boxShadow: topic.isChecked
-                          ? []
-                          : [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.12),
-                                offset: const Offset(1, 1),
-                              ),
-                            ],
                     ),
                     child: topic.isChecked
-                        ? const Icon(Icons.check, size: 14, color: AppColors.text, weight: 3.0)
+                        ? const Icon(
+                            Icons.check,
+                            size: 14,
+                            color: AppColors.bgPrimary,
+                            weight: 3.0,
+                          )
                         : null,
                   ),
                   const SizedBox(width: 12),
@@ -1284,24 +988,32 @@ class _RoadmapHomePageState extends State<RoadmapHomePage>
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
                         color: AppColors.text,
-                        decoration: topic.isChecked ? TextDecoration.lineThrough : null,
+                        decoration: topic.isChecked
+                            ? TextDecoration.lineThrough
+                            : null,
                       ),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
-                      color: badgeColor.withValues(alpha: 0.15),
-                      border: Border.all(color: AppColors.text.withValues(alpha: 0.5), width: 1.0),
-                      borderRadius: BorderRadius.circular(4),
+                      color: badgeColor.withOpacity(0.1),
+                      border: Border.all(
+                        color: badgeColor.withOpacity(0.3),
+                        width: 1.0,
+                      ),
+                      borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
                       topic.badge.toUpperCase(),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 8,
                         fontWeight: FontWeight.w900,
-                        color: AppColors.text,
+                        color: badgeTextColor,
                       ),
                     ),
                   ),
@@ -1323,15 +1035,28 @@ class _RoadmapHomePageState extends State<RoadmapHomePage>
                   (hasNote ? 'Edit note' : 'Add note').toUpperCase(),
                   style: const TextStyle(
                     fontSize: 9,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                     letterSpacing: 0.5,
                     color: AppColors.text,
                   ),
                 ),
                 style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: AppColors.text, width: 1.5),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  side: BorderSide(
+                    color: isNoteOpen
+                        ? AppColors.accent
+                        : AppColors.borderStrong,
+                    width: 1.0,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  backgroundColor: isNoteOpen
+                      ? AppColors.accent.withOpacity(0.1)
+                      : Colors.transparent,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -1339,15 +1064,15 @@ class _RoadmapHomePageState extends State<RoadmapHomePage>
                 child: Text(
                   hasNote
                       ? notePreview.length > 50
-                          ? '${notePreview.substring(0, 50)}...'
-                          : notePreview
+                            ? '${notePreview.substring(0, 50)}...'
+                            : notePreview
                       : 'No notes yet for this topic',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.text.withValues(alpha: 0.7),
+                    fontWeight: FontWeight.normal,
+                    color: AppColors.textMuted,
                   ),
                 ),
               ),
@@ -1364,39 +1089,48 @@ class _RoadmapHomePageState extends State<RoadmapHomePage>
                         Container(
                           width: double.infinity,
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFAF6E9),
-                            border: Border.all(color: AppColors.text, width: 1.8),
-                            borderRadius: BorderRadius.circular(8),
+                            color: AppColors.bgPrimary,
+                            border: Border.all(
+                              color: AppColors.border,
+                              width: 1.0,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          child: CustomPaint(
-                            painter: NotebookLinesPainter(),
-                            child: Padding(
-                              padding: const EdgeInsets.only(left: 42, right: 12, top: 4, bottom: 4),
-                              child: TextField(
-                                controller: noteController,
-                                minLines: 3,
-                                maxLines: 5,
-                                style: const TextStyle(
+                          child: Padding(
+                            padding: const EdgeInsets.only(
+                              left: 12,
+                              right: 12,
+                              top: 4,
+                              bottom: 4,
+                            ),
+                            child: TextField(
+                              controller: noteController,
+                              minLines: 3,
+                              maxLines: 5,
+                              style: const TextStyle(
+                                fontFamily: 'Courier New',
+                                fontSize: 13,
+                                color: AppColors.text,
+                                height: 1.69,
+                              ),
+                              onChanged: (value) => _updateTopicNote(
+                                section,
+                                group,
+                                topic,
+                                value,
+                              ),
+                              decoration: const InputDecoration(
+                                hintText:
+                                    'Write your notes, links, commands, or revision points here...',
+                                hintStyle: TextStyle(
                                   fontFamily: 'Courier New',
                                   fontSize: 13,
-                                  color: AppColors.text,
-                                  height: 1.69,
+                                  color: Colors.black38,
                                 ),
-                                onChanged: (value) =>
-                                    _updateTopicNote(section, group, topic, value),
-                                decoration: const InputDecoration(
-                                  hintText:
-                                      'Write your notes, links, commands, or revision points here...',
-                                  hintStyle: TextStyle(
-                                    fontFamily: 'Courier New',
-                                    fontSize: 13,
-                                    color: Colors.black38,
-                                  ),
-                                  border: InputBorder.none,
-                                  enabledBorder: InputBorder.none,
-                                  focusedBorder: InputBorder.none,
-                                  filled: false,
-                                ),
+                                border: InputBorder.none,
+                                enabledBorder: InputBorder.none,
+                                focusedBorder: InputBorder.none,
+                                filled: false,
                               ),
                             ),
                           ),
@@ -1405,11 +1139,13 @@ class _RoadmapHomePageState extends State<RoadmapHomePage>
                         Row(
                           children: [
                             Text(
-                              hasNote ? '📝 Saved locally' : '✍️ Start typing to save',
+                              hasNote
+                                  ? '📝 Saved locally'
+                                  : '✍️ Start typing to save',
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
-                                color: AppColors.text.withValues(alpha: 0.6),
+                                color: AppColors.text.withOpacity(0.6),
                               ),
                             ),
                             const Spacer(),
@@ -1419,13 +1155,17 @@ class _RoadmapHomePageState extends State<RoadmapHomePage>
                                   noteController.clear();
                                   _updateTopicNote(section, group, topic, '');
                                 },
-                                icon: const Icon(Icons.delete_outline, size: 16, color: AppColors.accentPink),
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  size: 16,
+                                  color: AppColors.text,
+                                ),
                                 label: const Text(
                                   'CLEAR',
                                   style: TextStyle(
-                                    color: AppColors.accentPink,
+                                    color: AppColors.text,
                                     fontSize: 10,
-                                    fontWeight: FontWeight.w900,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
                               ),
@@ -1440,35 +1180,4 @@ class _RoadmapHomePageState extends State<RoadmapHomePage>
       ),
     );
   }
-}
-
-class NotebookLinesPainter extends CustomPainter {
-  final Color lineColor;
-  final double lineSpacing;
-
-  NotebookLinesPainter({
-    this.lineColor = const Color(0xFFE2D9C5),
-    this.lineSpacing = 22.0,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = lineColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
-
-    for (double y = lineSpacing; y < size.height; y += lineSpacing) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
-    }
-
-    final marginPaint = Paint()
-      ..color = const Color(0xFFEAA6A0)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2;
-    canvas.drawLine(const Offset(32, 0), Offset(32, size.height), marginPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

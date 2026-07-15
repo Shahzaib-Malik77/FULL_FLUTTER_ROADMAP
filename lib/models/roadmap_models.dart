@@ -63,3 +63,24 @@ class RoadmapSection {
   double get progress =>
       totalCount == 0 ? 0.0 : completedCount / totalCount;
 }
+
+extension RoadmapProgress on List<RoadmapSection> {
+  int get totalTopics => fold(0, (sum, section) => sum + section.totalTopics);
+  int get completedTopics => fold(0, (sum, section) => sum + section.completedTopics);
+  int get leftTopics => totalTopics - completedTopics;
+  int get notedTopics => fold(0, (sum, section) => sum + section.groups.fold(0, (gSum, group) => gSum + group.topics.where((t) => t.notes.trim().isNotEmpty).length));
+}
+class RoadmapProgressState {
+  final int totalTopics;
+  final int completedTopics;
+  final int notedTopics;
+
+  RoadmapProgressState({
+    required this.totalTopics,
+    required this.completedTopics,
+    required this.notedTopics,
+  });
+
+  int get leftTopics => totalTopics - completedTopics;
+  double get progressPercent => totalTopics == 0 ? 0 : completedTopics / totalTopics;
+}

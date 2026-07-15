@@ -28,25 +28,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: _screens[_currentIndex],
       ),
       bottomNavigationBar: Container(
+        margin: const EdgeInsets.all(16),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: AppColors.bgSecondary,
-          border: const Border(
-            top: BorderSide(color: AppColors.text, width: 3),
-          ),
-          boxShadow: const [
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: AppColors.border, width: 1),
+          boxShadow: [
             BoxShadow(
-              color: AppColors.text,
-              offset: Offset(0, -4),
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
             )
           ],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _buildNavItem(0, Icons.map, 'ROADMAP'),
-            _buildNavItem(1, Icons.bookmark, 'BOOKMARKS'),
-            _buildNavItem(2, Icons.bar_chart, 'STATS'),
+            _buildNavItem(0, Icons.map_rounded, 'ROADMAP'),
+            _buildNavItem(1, Icons.bookmark_rounded, 'BOOKMARKS'),
+            _buildNavItem(2, Icons.bar_chart_rounded, 'STATS'),
           ],
         ),
       ),
@@ -66,37 +67,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
         curve: Curves.easeOut,
         padding: EdgeInsets.symmetric(horizontal: isSelected ? 16 : 12, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.accentYellow : Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.text, width: 2),
-          boxShadow: isSelected
-              ? const [
-                  BoxShadow(
-                    color: AppColors.text,
-                    offset: Offset(3, 3),
-                  ),
-                ]
-              : const [
-                  BoxShadow(
-                    color: AppColors.text,
-                    offset: Offset(1, 1),
-                  ),
-                ],
+          color: isSelected ? AppColors.accent.withOpacity(0.15) : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
           children: [
             Icon(
               icon,
-              color: AppColors.text,
+              color: isSelected ? AppColors.accent : AppColors.textMuted,
               size: 24,
             ),
             if (isSelected) ...[
               const SizedBox(width: 8),
               Text(
                 label,
-                style: const TextStyle(
-                  color: AppColors.text,
-                  fontWeight: FontWeight.bold,
+                style: TextStyle(
+                  color: AppColors.accent,
+                  fontWeight: FontWeight.w600,
                   fontSize: 12,
                 ),
               ),

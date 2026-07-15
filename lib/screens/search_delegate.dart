@@ -138,14 +138,7 @@ class TopicSearchDelegate extends SearchDelegate<String> {
           child: Container(
             decoration: BoxDecoration(
               color: AppColors.bgSecondary,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.text, width: 2.0),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.4),
-                  offset: const Offset(2, 3),
-                ),
-              ],
+              borderRadius: BorderRadius.zero,
             ),
             child: Stack(
               children: [
@@ -155,7 +148,7 @@ class TopicSearchDelegate extends SearchDelegate<String> {
                 onSearch(r['topic']!);
                 close(context, r['topic']!);
               },
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.zero,
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -179,8 +172,8 @@ class TopicSearchDelegate extends SearchDelegate<String> {
                               horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
                             color: badgeColor,
-                            border: Border.all(color: AppColors.text, width: 1.2),
-                            borderRadius: BorderRadius.circular(5),
+                            border: Border.all(color: AppColors.text, width: 4.0),
+                            borderRadius: BorderRadius.zero,
                           ),
                           child: Text(
                             r['badge']!.toUpperCase(),

@@ -65,7 +65,15 @@ CREATE TABLE notes (
 ''');
   }
 
+  // Memory fallback for Web
+  Set<String> _webProgressCache = {};
+  Map<String, String> _webNotesCache = {};
+
   Future<void> saveProgress(Set<String> progress) async {
+    if (kIsWeb) {
+      _webProgressCache = Set.from(progress);
+      return;
+    }
     final db = await instance.database;
     await db.delete('progress');
     
@@ -77,12 +85,17 @@ CREATE TABLE notes (
   }
 
   Future<Set<String>> loadProgress() async {
+    if (kIsWeb) return Set.from(_webProgressCache);
     final db = await instance.database;
     final result = await db.query('progress');
     return result.map((e) => e['id'] as String).toSet();
   }
 
   Future<void> saveNotes(Map<String, String> notes) async {
+    if (kIsWeb) {
+      _webNotesCache = Map.from(notes);
+      return;
+    }
     final db = await instance.database;
     await db.delete('notes');
 
@@ -94,6 +107,7 @@ CREATE TABLE notes (
   }
 
   Future<Map<String, String>> loadNotes() async {
+    if (kIsWeb) return Map.from(_webNotesCache);
     final db = await instance.database;
     final result = await db.query('notes');
     Map<String, String> notes = {};
